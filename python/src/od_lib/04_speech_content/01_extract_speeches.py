@@ -1,8 +1,8 @@
 import od_lib.definitions.path_definitions as path_definitions
-from od_lib.helper_functions.progressbar import progressbar
 import pandas as pd
 import regex
 import sys
+from tqdm import tqdm
 
 # input directory
 RAW_TXT = path_definitions.RAW_TXT
@@ -85,9 +85,8 @@ for folder_path in sorted(RAW_TXT.iterdir()):
     save_path.mkdir(parents=True, exist_ok=True)
 
     # Walk over every session in the period.
-    for session in progressbar(
-        folder_path.iterdir(),
-        f"Extract speeches (term {term_number:>2})..."
+    for session in tqdm(
+        folder_path.iterdir(), desc=f"Extract speeches (term {term_number:>2})..."
     ):
         # Skip e.g. the .DS_Store file.
         if not session.is_dir():
@@ -106,7 +105,7 @@ for folder_path in sorted(RAW_TXT.iterdir()):
         )
 
         # Open the session content
-        with open(session / "session_content.txt") as file:
+        with open(session / "session_content.txt", encoding="utf-8") as file:
             session_content = file.read()
 
         # Placeholders for the information of a speaker.

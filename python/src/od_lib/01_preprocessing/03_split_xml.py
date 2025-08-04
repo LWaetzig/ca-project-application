@@ -1,10 +1,10 @@
 from od_lib.helper_functions.clean_text import clean
 import od_lib.definitions.path_definitions as path_definitions
-from od_lib.helper_functions.progressbar import progressbar
 import xml.etree.ElementTree as et
 import regex
 import sys
 import dicttoxml
+from tqdm import tqdm
 
 # input directory
 RAW_XML = path_definitions.RAW_XML
@@ -38,7 +38,9 @@ for folder_path in sorted(RAW_XML.iterdir()):
         if str(term_number) not in sys.argv:
             continue
 
-    for xml_file_path in progressbar(folder_path.iterdir(), f"Parsing term {term_number:>2}..."):
+    for xml_file_path in tqdm(
+        folder_path.iterdir(), desc=f"Parsing term {term_number:>2}..."
+    ):
         if xml_file_path.suffix == ".xml":
             tree = et.parse(xml_file_path)
 
@@ -199,14 +201,19 @@ for folder_path in sorted(RAW_XML.iterdir()):
             save_path.mkdir(parents=True, exist_ok=True)
             # Save table of content, spoken content and appendix
             # in separate files.
-            with open(save_path / "toc.txt", "w") as text_file:
+            with open(save_path / "toc.txt", "w", encoding="utf-8") as text_file:
                 text_file.write(toc)
 
-            with open(save_path / "session_content.txt", "w") as text_file:
+            with open(
+                save_path / "session_content.txt", "w", encoding="utf-8"
+            ) as text_file:
                 text_file.write(session_content)
 
-            with open(save_path / "appendix.txt", "w") as text_file:
+            with open(save_path / "appendix.txt", "w", encoding="utf-8") as text_file:
                 text_file.write(appendix)
 
-            with open(save_path / "meta_data.xml", "wb") as result_file:
+            with open(
+                save_path / "meta_data.xml",
+                "wb",
+            ) as result_file:
                 result_file.write(dicttoxml.dicttoxml(meta_data))

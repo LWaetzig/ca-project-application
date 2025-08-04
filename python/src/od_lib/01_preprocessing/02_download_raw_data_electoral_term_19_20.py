@@ -1,8 +1,10 @@
 from bs4 import BeautifulSoup
 import od_lib.definitions.path_definitions as path_definitions
-from od_lib.helper_functions.progressbar import progressbar
+
+# from od_lib.helper_functions.progressbar import progressbar
 import requests
 import regex
+from tqdm import tqdm
 
 # output directory
 ELECTORAL_TERM_19_20_OUTPUT = path_definitions.ELECTORAL_TERM_19_20_STAGE_01
@@ -18,7 +20,6 @@ election_periods = [
         "url": "https://www.bundestag.de/ajax/filterlist/de/services/opendata/866354-866354?offset={}",  # noqa
     },
 ]
-
 
 
 for election_period in election_periods:
@@ -39,22 +40,30 @@ for election_period in election_periods:
         soup = BeautifulSoup(page.text, "html.parser")
         # scrape for links
         current_links = list(soup.find_all("a", attrs={"href": regex.compile("xml$")}))
+
         if len(current_links) != 0:
             xml_links += current_links
             offset += len(current_links)
+
         else:
             break
+
     print("Done.")
 
-    for link in progressbar(
+    for link in tqdm(
         xml_links,
-        f"Download XML-files for term {election_period['election_period']}...",
+        desc=f"Download XML-files for term {election_period['election_period']}",
     ):
-        url = "https://www.bundestag.de" + link.get("href")
+        url = link.get("href")
+        if not url.startswith("https"):
+            url = "https://www.bundestag.de" + url
+
+        print(f"Downloading {url}")
+
         page = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
         session = regex.search(r"\d{5}(?=\.xml)", url).group(0)
 
-        with open(OUTPUT_PATH / (session + ".xml"), "w") as file:
+        with open(OUTPUT_PATH / (session + ".xml"), "w", encoding="utf-8") as file:
             file.write(
                 regex.sub(
                     "</sub>",

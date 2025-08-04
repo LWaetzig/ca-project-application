@@ -17,6 +17,7 @@ abbreviations_dict = {
     "Fraktion Alternative für Deutschland": "AfD",
     "Fraktion Bayernpartei": "BP",
     "Fraktion Bündnis 90/Die Grünen": "Bündnis 90/Die Grünen",
+    "Fraktion Die Linke": "DIE LINKE.",
     "Fraktion DIE LINKE.": "DIE LINKE.",
     "Fraktion DP/DPB (Gast)": "DP/DPB",
     "Fraktion DRP (Gast)": "DRP",
@@ -49,6 +50,7 @@ abbreviations_dict = {
     "Gruppe Bündnis 90/Die Grünen": "Bündnis 90/Die Grünen",
     "Gruppe BSW - Bündnis Sahra Wagenknecht - Vernunft und Gerechtigkeit": "BSW",
     "Gruppe Deutsche Partei": "DP",
+    "Gruppe Die Linke.": "DIE LINKE.",
     "Gruppe Die Linke": "DIE LINKE.",
     "Gruppe Kraft/Oberländer": "KO",
     "Gruppe der Partei des Demokratischen Sozialismus": "PDS",
@@ -59,7 +61,9 @@ abbreviations_dict = {
 }
 
 factions.insert(0, "abbreviation", "")
-factions["abbreviation"] = factions["faction_name"].apply(lambda x: abbreviations_dict[x])
+factions["abbreviation"] = factions["faction_name"].apply(
+    lambda x: abbreviations_dict[x]
+)
 
 unique_abbreviations = np.unique(factions["abbreviation"])
 faction_ids = list(range(len(unique_abbreviations)))

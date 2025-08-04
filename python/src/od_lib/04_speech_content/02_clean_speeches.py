@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import sys
 import regex
+from tqdm import tqdm
 
 # input directory
 SPEECH_CONTENT_INPUT = path_definitions.SPEECH_CONTENT_STAGE_01
@@ -112,9 +113,9 @@ for folder_path in sorted(SPEECH_CONTENT_INPUT.iterdir()):
     save_path.mkdir(parents=True, exist_ok=True)
 
     # iterate over every speech_content file
-    for speech_content_file in progressbar(
+    for speech_content_file in tqdm(
         folder_path.glob("*.pkl"),
-        f"Clean speeches (term {term_number:>2})...",
+        desc=f"Clean speeches (term {term_number:>2})...",
     ):
         # read the spoken content csv
         speech_content = pd.read_pickle(speech_content_file)
@@ -214,12 +215,16 @@ for folder_path in sorted(SPEECH_CONTENT_INPUT.iterdir()):
                 speech_content.at[index, "position_short"],
                 speech_content.at[index, "position_long"],
             ) = get_position_short_and_long(
-                faction_abbrev if faction_abbrev else regex.sub("\n+", " ", position_raw)
+                faction_abbrev
+                if faction_abbrev
+                else regex.sub("\n+", " ", position_raw)
             )
             if faction_abbrev:
                 try:
                     speech_content.at[index, "faction_id"] = int(
-                        factions.loc[factions["abbreviation"] == faction_abbrev, "id"].iloc[0]
+                        factions.loc[
+                            factions["abbreviation"] == faction_abbrev, "id"
+                        ].iloc[0]
                     )
                 except IndexError:
                     speech_content.at[index, "faction_id"] = -1

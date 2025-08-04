@@ -1,7 +1,7 @@
 import od_lib.definitions.path_definitions as path_definitions
-from od_lib.helper_functions.progressbar import progressbar
 import xml.etree.ElementTree as et
 import regex
+from tqdm import tqdm
 
 # input directory
 ELECTORAL_TERM_19_20_INPUT = path_definitions.ELECTORAL_TERM_19_20_STAGE_01
@@ -19,7 +19,9 @@ for folder_path in sorted(ELECTORAL_TERM_19_20_INPUT.iterdir()):
         continue
     term_number = int(term_number.group(0))
 
-    for xml_file_path in progressbar(folder_path.iterdir(), f"Parsing term {term_number:>2}..."):
+    for xml_file_path in tqdm(
+        folder_path.iterdir(), desc=f"Parsing term {term_number:>2}..."
+    ):
         # read data
         tree = et.parse(xml_file_path)
         root = tree.getroot()
@@ -29,8 +31,11 @@ for folder_path in sorted(ELECTORAL_TERM_19_20_INPUT.iterdir()):
         appendix = et.ElementTree(root.find("anlagen"))
         meta_data = et.ElementTree(root.find("rednerliste"))
 
-        save_path = ELECTORAL_TERM_19_20_OUTPUT / folder_path.stem / \
-            regex.search(r"\d+", xml_file_path.stem).group()
+        save_path = (
+            ELECTORAL_TERM_19_20_OUTPUT
+            / folder_path.stem
+            / regex.search(r"\d+", xml_file_path.stem).group()
+        )
         save_path.mkdir(parents=True, exist_ok=True)
         # save to xmls
         toc.write(save_path / "toc.xml", encoding="UTF-8", xml_declaration=True)
