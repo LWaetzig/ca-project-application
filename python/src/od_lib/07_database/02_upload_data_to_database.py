@@ -12,12 +12,19 @@ CONTRIBUTIONS_EXTENDED = path_definitions.DATA_FINAL / "contributions_extended.p
 SPOKEN_CONTENT = path_definitions.DATA_FINAL / "speech_content.pkl"
 FACTIONS = path_definitions.DATA_FINAL / "factions.pkl"
 PEOPLE = path_definitions.DATA_FINAL / "politicians.csv"
-CONTRIBUTIONS_SIMPLIFIED = path_definitions.CONTRIBUTIONS_SIMPLIFIED \
+CONTRIBUTIONS_SIMPLIFIED = (
+    path_definitions.CONTRIBUTIONS_SIMPLIFIED / "contributions_simplified.pkl"
+)
+CONTRIBUTIONS_SIMPLIFIED_WP19 = (
+    path_definitions.CONTRIBUTIONS_SIMPLIFIED
+    / "electoral_term_19"
     / "contributions_simplified.pkl"
-CONTRIBUTIONS_SIMPLIFIED_WP19 = path_definitions.CONTRIBUTIONS_SIMPLIFIED \
-    / "electoral_term_19" / "contributions_simplified.pkl"
-CONTRIBUTIONS_SIMPLIFIED_WP20 = path_definitions.CONTRIBUTIONS_SIMPLIFIED \
-    / "electoral_term_20" / "contributions_simplified.pkl"
+)
+CONTRIBUTIONS_SIMPLIFIED_WP20 = (
+    path_definitions.CONTRIBUTIONS_SIMPLIFIED
+    / "electoral_term_20"
+    / "contributions_simplified.pkl"
+)
 ELECTORAL_TERMS = path_definitions.ELECTORAL_TERMS / "electoral_terms.csv"
 
 # Load data
@@ -96,9 +103,15 @@ def check_politicians(row):
 
 
 print("Upload electoral_terms...", end="", flush=True)
-electoral_terms.to_sql(
-    "electoral_terms", engine, if_exists="append", schema="open_discourse", index=False
-)
+with engine.begin() as connection:
+    electoral_terms.to_sql(
+        "electoral_terms",
+        connection,
+        if_exists="append",
+        schema="open_discourse",
+        index=False,
+        method="multi",
+    )
 print("Done.")
 
 print("Upload politicians...", end="", flush=True)
@@ -108,9 +121,14 @@ politicians = politicians.where((pd.notnull(politicians)), None)
 politicians["birth_date"] = politicians["birth_date"].apply(convert_date_politicians)
 politicians["death_date"] = politicians["death_date"].apply(convert_date_politicians)
 
-politicians.to_sql(
-    "politicians", engine, if_exists="append", schema="open_discourse", index=False
-)
+with engine.begin() as connection:
+    politicians.to_sql(
+        "politicians",
+        connection,
+        if_exists="append",
+        schema="open_discourse",
+        index=False,
+    )
 print("Done.")
 
 print("Upload factions...", end="", flush=True)
@@ -122,7 +140,10 @@ factions = [
     ["BP", "Bayernpartei"],
     ["BSW", "Bündnis Sahra Wagenknecht"],
     ["Grüne", "Bündnis 90/Die Grünen"],
-    ["CDU/CSU", "Christlich Demokratische Union Deutschlands/Christlich-Soziale Union in Bayern"],
+    [
+        "CDU/CSU",
+        "Christlich Demokratische Union Deutschlands/Christlich-Soziale Union in Bayern",
+    ],
     ["DA", "Demokratische Arbeitsgemeinschaft"],
     ["DIE LINKE.", "DIE LINKE."],
     ["DP", "Deutsche Partei"],
@@ -150,14 +171,15 @@ factions = [
 
 # convert to dataframe and add id-field
 factions = pd.DataFrame(
-    [[idx-1, *entry] for idx, entry in enumerate(factions)],
+    [[idx - 1, *entry] for idx, entry in enumerate(factions)],
     columns=["id", "abbreviation", "full_name"],
 )
 factions["id"] = factions["id"].astype(int)
 
-factions.to_sql(
-    "factions", engine, if_exists="append", schema="open_discourse", index=False
-)
+with engine.begin() as connection:
+    factions.to_sql(
+        "factions", connection, if_exists="append", schema="open_discourse", index=False
+    )
 print("Done.")
 
 print("Upload speeches...", end="", flush=True)
@@ -170,9 +192,10 @@ speeches = speeches.where((pd.notnull(speeches)), None)
 speeches["position_long"].replace([r"^\s*$"], [None], regex=True, inplace=True)
 speeches["politician_id"] = speeches.apply(check_politicians, axis=1)
 
-speeches.to_sql(
-    "speeches", engine, if_exists="append", schema="open_discourse", index=False
-)
+with engine.begin() as connection:
+    speeches.to_sql(
+        "speeches", connection, if_exists="append", schema="open_discourse", index=False
+    )
 print("Done.")
 
 print("Upload contributions_extended...", end="", flush=True)
@@ -182,14 +205,14 @@ contributions_extended = pd.read_pickle(CONTRIBUTIONS_EXTENDED)
 contributions_extended = contributions_extended.where(
     (pd.notnull(contributions_extended)), None
 )
-
-contributions_extended.to_sql(
-    "contributions_extended",
-    engine,
-    if_exists="append",
-    schema="open_discourse",
-    index=False,
-)
+with engine.begin() as connection:
+    contributions_extended.to_sql(
+        "contributions_extended",
+        connection,
+        if_exists="append",
+        schema="open_discourse",
+        index=False,
+    )
 print("Done.")
 
 print("Upload contributions_simplified...", end="", flush=True)
@@ -217,12 +240,12 @@ contributions_simplified = contributions_simplified.where(
 )
 
 contributions_simplified["id"] = range(len(contributions_simplified.content))
-
-contributions_simplified.to_sql(
-    "contributions_simplified",
-    engine,
-    if_exists="append",
-    schema="open_discourse",
-    index=False,
-)
+with engine.begin() as connection:
+    contributions_simplified.to_sql(
+        "contributions_simplified",
+        connection,
+        if_exists="append",
+        schema="open_discourse",
+        index=False,
+    )
 print("Done.")
