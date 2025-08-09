@@ -6,7 +6,7 @@
   - [Pre-Setup](#pre-setup)
   - [Setup Docker Containers](#setup-docker-containers)
   - [Database Container Setup](#database-container-setup)
-    - [Database: Initial Start / Reset](#database-initial-start--reset)
+  - [Streamlit Application Setup](#streamlit-application-setup)
 
 ## Repository Structure
 
