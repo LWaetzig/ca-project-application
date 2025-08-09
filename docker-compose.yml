@@ -1,6 +1,6 @@
 services:
   database:
-    container_name: od-database
+    container_name: database
     build: database
     volumes:
       - ./database/data:/var/lib/postgresql/data
@@ -16,32 +16,26 @@ services:
       - POSTGRES_DB=postgres
       - POSTGRES_PASSWORD=postgres
 
-  proxy:
-    container_name: od-proxy
-    build: proxy
-    volumes:
-      - ./proxy/package.json:/srv/package.json
-      - ./proxy/yarn.lock:/srv/yarn.lock
-      - ./proxy/src/:/srv/src/
-    environment:
-      - CACHE_EXPIRATION=1000
-      - POSTGRES_DB_HOST=database
+  streamlit-app:
+    container_name: streamlit-app
+    build: app
     depends_on:
       database:
-        condition: service_started
-    ports:
-      - "5300:5300"
-
-  frontend:
-    container_name: od-frontend
-    build: frontend
+        condition: service_healthy
     volumes:
-      - ./frontend/package.json:/srv/package.json
-      - ./frontend/yarn.lock:/srv/yarn.lock
-      - ./frontend/src/:/srv/src/
-      - ./frontend/public/:/srv/public/
-    depends_on:
-      proxy:
-        condition: service_started
+      - ./app:/app
+      - /tmp/poetry_cache:/tmp/poetry_cache
     ports:
-      - "3000:3000"
+      - "8501:8501"
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    user: appuser
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
