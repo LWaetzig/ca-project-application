@@ -1,28 +1,69 @@
 import os
-from typing import Any, Dict, List, Optional
-from pathlib import Path
+from typing import Any
 
-import streamlit as st
-from src.Database import Database
 import pandas as pd
+import streamlit as st
 
 
-@st.cache_data
-def preload_table_content(file_path: str) -> pd.DataFrame:
-    """Load table content from Parquet file with caching"""
+def preload_table_content(
+    file_path: str, columns: list[str] | None = None, downcast: bool = True
+) -> pd.DataFrame:
+    """Load table content from Parquet file with optional column selection and downcasting"""
     try:
-        if not Path(file_path).exists():
+        if not os.path.exists(file_path):
             st.error(f"File not found: {file_path}")
             return pd.DataFrame()
 
-        df = pd.read_parquet(file_path)
+        df = pd.read_parquet(file_path, columns=columns)
+        if downcast and not df.empty:
+            # Downcast integer and float columns where possible
+            for col in df.select_dtypes(
+                include=["int", "int64", "float", "float64"]
+            ).columns:
+                try:
+                    if pd.api.types.is_integer_dtype(df[col]):
+                        df[col] = pd.to_numeric(df[col], downcast="integer")
+                    elif pd.api.types.is_float_dtype(df[col]):
+                        df[col] = pd.to_numeric(df[col], downcast="float")
+                except Exception:
+                    pass
+
+            # Convert low-cardinality object columns to category (heuristic)
+            for col in df.select_dtypes(include=["object"]).columns:
+                try:
+                    n = len(df)
+                    nunique = df[col].nunique(dropna=True)
+                    if n > 0 and nunique > 0 and nunique / n <= 0.5:
+                        df[col] = df[col].astype("category")
+                except Exception:
+                    pass
         return df
     except Exception as e:
         st.error(f"Error loading {file_path}: {str(e)}")
         return pd.DataFrame()
 
 
-def get_table_info(df: pd.DataFrame) -> Dict[str, Any]:
+def get_parquet_metadata(file_path: str) -> dict[str, Any]:
+    """Return basic Parquet metadata (columns and row count) without loading the whole file."""
+    meta: dict[str, Any] = {"columns": [], "row_count": 0}
+    try:
+        try:
+            import pyarrow.parquet as pq  # type: ignore
+
+            pf = pq.ParquetFile(file_path)
+            meta["columns"] = [s.name for s in pf.schema]
+            meta["row_count"] = pf.metadata.num_rows if pf.metadata is not None else 0
+        except Exception:
+            # Fallback: load only schema via pandas (may read minimally depending on engine)
+            df_head = pd.read_parquet(file_path, columns=None)
+            meta["columns"] = list(df_head.columns)
+            meta["row_count"] = len(df_head)
+    except Exception:
+        pass
+    return meta
+
+
+def get_table_info(df: pd.DataFrame) -> dict[str, Any]:
     """Extract table information from DataFrame"""
     if df.empty:
         return {"columns": [], "column_names": [], "row_count": 0, "memory_usage_mb": 0}
@@ -68,15 +109,15 @@ def get_sample_data(df: pd.DataFrame, sample_size: int = 1000) -> pd.DataFrame:
 
 def filter_dataframe(
     df: pd.DataFrame,
-    columns: Optional[List[str]] = None,
-    filters: Optional[Dict] = None,
-    limit: Optional[int] = None,
+    columns: list[str] | None = None,
+    filters: dict | None = None,
+    limit: int | None = None,
 ) -> pd.DataFrame:
     """Filter DataFrame with optional column selection, filters, and limit"""
     if df.empty:
         return df
 
-    result_df = df.copy()
+    result_df = df
 
     # Apply filters
     if filters:
@@ -116,7 +157,7 @@ def filter_dataframe(
     return result_df
 
 
-def calculate_memory_usage() -> Dict[str, float]:
+def calculate_memory_usage() -> dict[str, float]:
     """Calculate memory usage of all loaded tables"""
     memory_usage = {}
 
