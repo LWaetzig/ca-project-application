@@ -1,14 +1,15 @@
-import streamlit as st
+from typing import List
+
+import numpy as np
 import pandas as pd
 import plotly.express as px
-import numpy as np
-from typing import List
+import streamlit as st
 from src.utils import (
+    calculate_memory_usage,
+    filter_dataframe,
     get_sample_data,
     get_table_info,
-    filter_dataframe,
 )
-from src.utils import calculate_memory_usage
 
 
 def dashboard_view() -> None:
@@ -499,7 +500,7 @@ def text_analysis(df: pd.DataFrame, columns: List[str]):
 
 def advanced_analysis():
     """Advanced analysis with cross-table functionality"""
-    st.header("🔍 Advanced Analysis")
+    st.markdown("## Advanced Analysis")
 
     if "db_tables" not in st.session_state:
         st.error("No tables loaded")
@@ -508,28 +509,25 @@ def advanced_analysis():
     analysis_type = st.selectbox(
         "Analysis Type",
         [
-            "Cross-Table Analysis",
-            "Speech Content Analysis",
-            "Political Trends",
             "Custom Filtering",
+            "Speech Content Analysis",
+            "Cross-Table Analysis",
         ],
     )
 
-    if analysis_type == "Cross-Table Analysis":
-        cross_table_analysis()
+    if analysis_type == "Custom Filtering":
+        custom_filtering_analysis()
     elif analysis_type == "Speech Content Analysis":
         speech_content_analysis()
-    elif analysis_type == "Political Trends":
-        political_trends_analysis()
-    elif analysis_type == "Custom Filtering":
-        custom_filtering_analysis()
+    elif analysis_type == "Cross-Table Analysis":
+        cross_table_analysis()
 
 
 def cross_table_analysis():
     """Analysis across multiple tables"""
-    st.subheader("🔗 Cross-Table Analysis")
+    st.markdown("## Cross-Table Analysis")
 
-    # Table selection
+    # Select tables for cross-table analysis
     selected_tables = st.multiselect(
         "Select Tables",
         st.session_state["db_tables"],
@@ -546,37 +544,42 @@ def cross_table_analysis():
             df1 = st.session_state[table1]
             df2 = st.session_state[table2]
 
-            common_cols = set(df1.columns) & set(df2.columns)
-
-            if common_cols:
-                st.write(f"**{table1} ↔ {table2}**")
-                st.write(f"Common columns: {', '.join(common_cols)}")
-
-                # Show sample merge
-                join_col = st.selectbox(
-                    f"Join on column ({table1}-{table2})",
-                    list(common_cols),
-                    key=f"join_{table1}_{table2}",
+            # Show sample merge
+            join_col1, join_col2 = st.columns(2)
+            with join_col1:
+                join_col_left = st.selectbox(
+                    f"Select Join Column for {table1}",
+                    list(df1.columns),
+                    index=None,
+                    key=f"join_{table1}_{table2}_left",
+                )
+            with join_col2:
+                join_col_right = st.selectbox(
+                    f"Select Join Column for {table2}",
+                    list(df2.columns),
+                    index=None,
+                    key=f"join_{table1}_{table2}_right",
                 )
 
-                if join_col:
-                    try:
-                        merged = pd.merge(
-                            df1.head(100),
-                            df2.head(100),
-                            on=join_col,
-                            how="inner",
-                            suffixes=("_1", "_2"),
-                        )
-                        st.write(f"Sample merge result: {len(merged)} rows")
-                        st.dataframe(merged.head(), use_container_width=True)
-                    except Exception as e:
-                        st.error(f"Merge failed: {str(e)}")
+            if join_col_left and join_col_right:
+                try:
+                    merged = pd.merge(
+                        df1.head(100),
+                        df2,
+                        left_on=join_col_left,
+                        right_on=join_col_right,
+                        how="inner",
+                        suffixes=("_1", "_2"),
+                    )
+                    st.write(f"Sample merge result: {len(merged)} rows")
+                    st.dataframe(merged.head(), use_container_width=True)
+                except Exception as e:
+                    st.error(f"Merge failed: {str(e)}")
 
 
 def speech_content_analysis():
     """Specialized analysis for speech content"""
-    st.subheader("🎤 Speech Content Analysis")
+    st.markdown("### Speech Content Analysis")
 
     if "speeches" not in st.session_state:
         st.error("Speeches table not found")
@@ -602,18 +605,26 @@ def speech_content_analysis():
 
     # Speech analysis options
     analysis_option = st.selectbox(
-        "Analysis Focus", ["Length Analysis", "Temporal Patterns", "Speaker Analysis"]
+        "Analysis Focus", ["Length Analysis", "Temporal Patterns"]
     )
 
     if analysis_option == "Length Analysis" and "speech_content" in speeches_df.columns:
-        speech_lengths = speeches_df["speech_content"].str.len()
+        length_type = st.selectbox(
+            "Select Length Type", ["Characters", "Words"], index=None, key="length_type"
+        )
+
+        if length_type == "Characters":
+            speech_lengths = speeches_df["speech_content"].str.len()
+        else:
+            speech_lengths = speeches_df["speech_content"].str.split().str.len()
 
         fig = px.histogram(
             x=speech_lengths,
             nbins=50,
-            title="Distribution of Speech Lengths",
-            labels={"x": "Characters", "y": "Frequency"},
+            title=f"Distribution of Speech Lengths (by {length_type})",
+            labels={"x": length_type, "y": "Frequency"},
         )
+        fig.update_yaxes(type="log")
         st.plotly_chart(fig, use_container_width=True)
 
     elif analysis_option == "Temporal Patterns" and "date" in speeches_df.columns:
@@ -631,64 +642,13 @@ def speech_content_analysis():
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    elif (
-        analysis_option == "Speaker Analysis" and "politician_id" in speeches_df.columns
-    ):
-        speeches_df["politician_id"] = speeches_df["politician_id"].astype(str)
-        speaker_counts = (
-            speeches_df.loc[speeches_df["politician_id"] != "-1"]["politician_id"]
-            .value_counts()
-            .head(20)
-        )
-        log_scaled = st.checkbox(
-            "Log Scale Y-Axis", value=False, key="log_scale_speaker"
-        )
-        fig = px.bar(
-            x=speaker_counts.index,
-            y=speaker_counts.values,
-            title="Top 20 Speakers by Speech Count",
-        )
-        fig.update_layout(yaxis={"categoryorder": "total ascending"})
-        if log_scaled:
-            fig.update_yaxes(type="log")
-        st.plotly_chart(fig, use_container_width=True)
-
-
-def political_trends_analysis():
-    """Political trends analysis"""
-    st.subheader("🏛️ Political Trends Analysis")
-
-    # This would be specific to your political data structure
-    st.info(
-        "This section would contain analysis specific to political trends based on your data schema"
-    )
-
-    # Example: if you have faction/party data
-    if "factions" in st.session_state and "speeches" in st.session_state:
-        factions_df = st.session_state["factions"]
-        speeches_df = st.session_state["speeches"]
-
-        st.write("**Available for analysis:**")
-        st.write(f"• Factions: {len(factions_df)} records")
-        st.write(f"• Speeches: {len(speeches_df)} records")
-
-        # Example analysis placeholder
-        if "faction" in speeches_df.columns:
-            faction_counts = speeches_df["faction"].value_counts()
-
-            fig = px.pie(
-                values=faction_counts.values,
-                names=faction_counts.index,
-                title="Speech Distribution by Faction",
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
 
 def custom_filtering_analysis():
     """Custom filtering and analysis"""
-    st.subheader("🎛️ Custom Filtering Analysis")
 
-    # Table selection
+    st.markdown("### Custom Filtering Analysis")
+
+    # Select table for custom filtering
     selected_table = st.selectbox(
         "Select Table for Custom Analysis",
         st.session_state["db_tables"],
@@ -700,68 +660,136 @@ def custom_filtering_analysis():
 
     df = st.session_state[selected_table]
 
-    st.write("**Available Columns:**")
-    st.write(df.columns.tolist())
+    # init session state for filters
+    if "filter_state" not in st.session_state:
+        st.session_state["filter_state"] = [{} for _ in range(3)]
 
-    # Custom filters
-    st.write("**Apply Filters:**")
+    st.markdown("### Apply Filters")
 
     filters = {}
 
-    # Add multiple filter options
-    for i in range(3):  # Allow up to 3 filters
-        with st.expander(f"Filter {i+1}"):
+    col1, col2, col3 = st.columns(3)
+    filter_columns = [col1, col2, col3]
+
+    for i in range(3):
+        with filter_columns[i]:
+            st.markdown(f"**Filter {i+1}**")
+            prev_col = st.session_state["filter_state"][i].get("filter_col", "None")
             filter_col = st.selectbox(
-                f"Column", ["None"] + df.columns.tolist(), key=f"filter_col_{i}"
+                f"Column",
+                ["None"] + df.columns.tolist(),
+                key=f"filter_col_{i}",
+                index=(
+                    (["None"] + df.columns.tolist()).index(prev_col)
+                    if prev_col in ["None"] + df.columns.tolist()
+                    else 0
+                ),
             )
+            st.session_state["filter_state"][i]["filter_col"] = filter_col
 
             if filter_col != "None":
                 if pd.api.types.is_numeric_dtype(df[filter_col]):
+                    prev_type = st.session_state["filter_state"][i].get(
+                        "filter_type", "greater_than"
+                    )
                     filter_type = st.selectbox(
                         f"Filter Type",
                         ["greater_than", "less_than", "equals", "between"],
                         key=f"filter_type_{i}",
+                        index=(
+                            ["greater_than", "less_than", "equals", "between"].index(
+                                prev_type
+                            )
+                            if prev_type
+                            in ["greater_than", "less_than", "equals", "between"]
+                            else 0
+                        ),
                     )
+                    st.session_state["filter_state"][i]["filter_type"] = filter_type
 
                     if filter_type == "between":
+                        prev_min = st.session_state["filter_state"][i].get(
+                            "min_val", float(df[filter_col].min())
+                        )
+                        prev_max = st.session_state["filter_state"][i].get(
+                            "max_val", float(df[filter_col].max())
+                        )
                         min_val = st.number_input(
                             f"Min Value",
-                            value=float(df[filter_col].min()),
+                            value=prev_min,
                             key=f"filter_min_{i}",
                         )
                         max_val = st.number_input(
                             f"Max Value",
-                            value=float(df[filter_col].max()),
+                            value=prev_max,
                             key=f"filter_max_{i}",
                         )
+                        st.session_state["filter_state"][i]["min_val"] = min_val
+                        st.session_state["filter_state"][i]["max_val"] = max_val
                         filters[filter_col] = {
                             "type": filter_type,
                             "value": (min_val, max_val),
                         }
                     else:
-                        filter_val = st.number_input(f"Value", key=f"filter_val_{i}")
+                        prev_val = st.session_state["filter_state"][i].get(
+                            "filter_val", float(df[filter_col].min())
+                        )
+                        filter_val = st.number_input(
+                            "Value", value=prev_val, key=f"filter_val_{i}"
+                        )
+                        st.session_state["filter_state"][i]["filter_val"] = filter_val
                         filters[filter_col] = {"type": filter_type, "value": filter_val}
 
                 else:
-                    filter_type = st.selectbox(
-                        f"Filter Type", ["equals", "contains"], key=f"filter_type_{i}"
+                    prev_type = st.session_state["filter_state"][i].get(
+                        "filter_type", "equals"
                     )
-                    filter_val = st.text_input(f"Value", key=f"filter_val_{i}")
+                    filter_type = st.selectbox(
+                        f"Filter Type",
+                        ["equals", "contains"],
+                        key=f"filter_type_{i}",
+                        index=(
+                            ["equals", "contains"].index(prev_type)
+                            if prev_type in ["equals", "contains"]
+                            else 0
+                        ),
+                    )
+                    st.session_state["filter_state"][i]["filter_type"] = filter_type
+                    prev_val = st.session_state["filter_state"][i].get("filter_val", "")
+                    filter_val = st.text_input(
+                        f"Value", value=prev_val, key=f"filter_val_{i}"
+                    )
+                    st.session_state["filter_state"][i]["filter_val"] = filter_val
                     if filter_val:
                         filters[filter_col] = {"type": filter_type, "value": filter_val}
 
     # Apply filters and show results
+    # Clear filters button
     if st.button("Apply Filters"):
-        filtered_df = filter_dataframe(df, filters=filters)
+        st.session_state["last_filtered"] = {
+            "filtered_df": filter_dataframe(df, filters=filters),
+            "filters": filters,
+        }
+    if st.button("Clear All Filters"):
+        st.session_state["filter_state"] = [{} for _ in range(3)]
+        st.rerun()
 
-        st.write(f"**Results: {len(filtered_df):,} rows (from {len(df):,} original)**")
+    # Retain filtered results
+    filtered_df = None
+    if "last_filtered" in st.session_state:
+        filtered_df = st.session_state["last_filtered"]["filtered_df"]
         st.dataframe(filtered_df.head(100), use_container_width=True)
 
-        # Quick visualization of filtered results
+        # Quick visualization
         if len(filtered_df) > 0:
             numeric_cols = filtered_df.select_dtypes(include=[np.number]).columns
             if len(numeric_cols) > 0:
-                viz_col = st.selectbox("Quick Visualization Column", numeric_cols)
+                viz_col = st.selectbox(
+                    "Select Column for Quick Visualization",
+                    numeric_cols,
+                    index=None,
+                    key=f"viz_col_{selected_table}",  # Stable key includes table name
+                )
                 if viz_col:
                     fig = px.histogram(
                         filtered_df,
