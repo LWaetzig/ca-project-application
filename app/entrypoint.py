@@ -1,10 +1,7 @@
 import os
 
 import streamlit as st
-from dotenv import load_dotenv
 from src.utils import preload_table_content
-
-load_dotenv()
 
 
 def app():
