@@ -1,7 +1,26 @@
 services:
+    ollama:
+        build: ollama
+        image: ollama:latest
+        ports:
+            - '11434:11434'
+        volumes:
+            - ollama_models:/root/.ollama
+        restart: unless-stopped
+        mem_limit: 8g
+        mem_reservation: 3g
+        shm_size: '1g'
+        healthcheck:
+            test: ['CMD', 'curl', '-f', 'http://localhost:11434/api/tags']
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+
     streamlit-app:
-        container_name: streamlit-app
         build: app
+        image: streamlit-app:latest
+        container_name: streamlit-app
         volumes:
             - ./app:/app
             - /tmp/poetry_cache:/tmp/poetry_cache
@@ -11,8 +30,15 @@ services:
             - PYTHONDONTWRITEBYTECODE=1
             - PYTHONUNBUFFERED=1
             - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+            - STREAMLIT_SERVER_HEADLESS=true
+            - STREAMLIT_SERVER_FILEWATCHERTYPE=none
+            - LLM_BASE_URL=http://ollama:11434
+            - OLLAMA_MODEL=qwen2.5vl:7b
         user: appuser
         restart: unless-stopped
+        depends_on:
+            ollama:
+                condition: service_healthy
         healthcheck:
             test:
                 ['CMD', 'curl', '-fsS', 'http://localhost:8501/_stcore/health']
@@ -23,3 +49,6 @@ services:
         mem_limit: 8g
         mem_reservation: 3g
         shm_size: '1g'
+
+volumes:
+    ollama_models:
