@@ -26,6 +26,10 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock* /app/
 RUN poetry install --no-root && rm -rf $POETRY_CACHE_DIR
 
+# set up virtual environment and add to PATH
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 # Copy source code
 COPY . /app
 
@@ -40,4 +44,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 USER appuser
 
 # Run Streamlit directly since packages are installed globally
-CMD ["poetry", "run", "streamlit", "run", "entrypoint.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "entrypoint.py", "--server.port=8501", "--server.address=0.0.0.0"]
