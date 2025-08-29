@@ -1,6 +1,7 @@
 import time
 
 import streamlit as st
+from src.rag import answer_with_retrieval
 
 st.title("Chatbot")
 
@@ -23,27 +24,25 @@ if prompt:
     with st.chat_message(name="assistant", avatar="ai"):
         with st.spinner("Antwort wird generiert...", show_time=True):
 
-            # get context for user query
-            context = "Retrieving context for user query..."
-            time.sleep(2)  # simulate context retrieval
-
-            # generate response
-            response = f"Generating response for user query: {context}"
-            time.sleep(2)  # simulate response generation
-
-            st.session_state["chatbot_messages"].append(
-                {"role": "assistant", "content": response, "sources": context}
-            )
+            answer, sources = answer_with_retrieval(prompt)
 
         message_placeholder = st.empty()
         full_response = str()
 
-        for char in response:
+        for char in answer:
             full_response += char
             message_placeholder.markdown(full_response + "█ ", unsafe_allow_html=True)
             time.sleep(0.05)  # simulate typing effect
 
-        message_placeholder.markdown(response, unsafe_allow_html=True)
+        message_placeholder.markdown(answer, unsafe_allow_html=True)
 
-        with st.expander("Quellen", expanded=False):
-            st.markdown(context, unsafe_allow_html=True)
+        if sources:
+            with st.expander("Quellen", expanded=False):
+                for s in sources:
+                    st.markdown(
+                        f"- [{s.get('date', '')}] {s.get('preview', '')} (sim={s.get('similarity', 0)})"
+                    )
+
+        st.session_state["chatbot_messages"].append(
+            {"role": "assistant", "content": answer, "sources": sources}
+        )
