@@ -54,7 +54,7 @@ with col2:
             """
             This chatbot is intended as an additional feature, with the aim of testing the newly released Ollama Docker images.
             The chatbot does not have high expectations for high-quality answers, since both compute resources and methods were only available to a limited extent.
-            The most challenging aspect of this chatbot was dealing with limited memory and the vast amount of data.
+            The most challenging aspect of this chatbot was dealing with limited memory and the vast amount of data. If you encounter memory issues, restrict loading data in the entrypoint.py file
             """
         )
 
