@@ -7,7 +7,7 @@ services:
         volumes:
             - ollama_models:/root/.ollama
         restart: unless-stopped
-        mem_limit: 8g
+        mem_limit: 7g
         mem_reservation: 3g
         shm_size: '1g'
         healthcheck:
@@ -34,6 +34,10 @@ services:
             - STREAMLIT_SERVER_FILEWATCHERTYPE=none
             - LLM_BASE_URL=http://ollama:11434
             - OLLAMA_MODEL=qwen2.5vl:7b
+            - TOKENIZERS_PARALLELISM=false
+            - PYTHONHASHSEED=1
+            - OMP_NUM_THREADS=1
+            - MKL_NUM_THREADS=1
         user: appuser
         restart: unless-stopped
         depends_on:
@@ -46,9 +50,10 @@ services:
             timeout: 5s
             start_period: 30s
             retries: 3
-        mem_limit: 8g
-        mem_reservation: 3g
-        shm_size: '1g'
+        mem_limit: 6g
+        mem_reservation: 1g
+        shm_size: '256m'
+        oom_kill_disable: false
 
 volumes:
     ollama_models:
