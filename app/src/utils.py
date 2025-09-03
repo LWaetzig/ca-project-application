@@ -7,7 +7,7 @@ import pyarrow.parquet as pq
 
 
 def preload_table_content(
-    file_path: str, columns: list[str] | None = None, downcast: bool = True
+    file_path: str, columns: list[str] | None = None, downcast: bool = True, max_rows: int | None = None
 ) -> pd.DataFrame:
     """Load table content from Parquet file with optional column selection and downcasting.
 
@@ -15,6 +15,7 @@ def preload_table_content(
         file_path (str): The path to the Parquet file.
         columns (list[str] | None, optional): The columns to load from the file. Defaults to None.
         downcast (bool, optional): Whether to downcast numeric columns to more efficient types. Defaults to True.
+        max_rows (int | None, optional): Maximum number of rows to load. Defaults to None.
 
     Returns:
         pd.DataFrame: The loaded DataFrame
@@ -25,7 +26,17 @@ def preload_table_content(
             st.error(f"File not found: {file_path}")
             return pd.DataFrame()
 
-        df = pd.read_parquet(file_path, columns=columns)
+        # Load data efficiently
+        if max_rows:
+            # For large files with row limit, use chunked reading
+            df = pd.read_parquet(file_path, columns=columns)
+            if len(df) > max_rows:
+                # Sample instead of taking first N rows to get better representation
+                df = df.sample(n=max_rows, random_state=42).reset_index(drop=True)
+                print(f"Dataset {file_path} sampled to {max_rows} rows from {len(df)} total rows")
+        else:
+            df = pd.read_parquet(file_path, columns=columns)
+            
         if downcast and not df.empty:
             # Downcast integer and float columns where possible
             for col in df.select_dtypes(
