@@ -26,10 +26,6 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock* /app/
 RUN poetry install --no-root && rm -rf $POETRY_CACHE_DIR
 
-# set up virtual environment and add to PATH
-ENV VIRTUAL_ENV=/app/.venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
 # Copy source code
 COPY . /app
 
