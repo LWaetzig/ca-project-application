@@ -20,6 +20,10 @@ This Repository is structured in two different components.
 - Required Software:
   - [python >=3.11](https://www.python.org/downloads/),
   - [Docker & docker-compose](https://docs.docker.com/),
+- After cloning the repository
+  - download the data from the [Google Drive](https://drive.google.com/drive/folders/1NYCDdsTFyRenn_rzbDNEzH9H_K4w_UmZ?usp=sharing)
+  - navigate into the `app` directory
+  - create a new folder called `data` and copy all files from the Google Drive into this directory
 
 ### Setup & Build Docker Containers
 
