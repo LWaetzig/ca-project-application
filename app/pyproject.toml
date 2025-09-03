@@ -24,6 +24,8 @@ umap-learn = "^0.5.9.post2"
 matplotlib = "^3.10.5"
 spacy = "^3.8.7"
 ollama = "^0.5.3"
+statsmodels = "^0.14.5"
+seaborn = "^0.13.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
