@@ -1,3 +1,0 @@
-CREATE SCHEMA lda_group;
-GRANT USAGE ON SCHEMA lda_group TO visitor;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA lda_group TO visitor;

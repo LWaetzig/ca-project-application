@@ -1,152 +1,86 @@
-<!-- markdownlint-disable MD033 -->
-<p align="center">
-  <a href="https://opendiscourse.de/">
-    <img
-      alt="Open Discourse"
-      src="https://opendiscourse.de/images/github/open-discourse_full_black_transparent.png"
-      width="400"
-    />
-  </a>
-</p>
-
 # Table of Content
 
-- [Project Status](#project-status)
-- [Project Info](#project-info)
-- [Repository Structure](#repository-structure)
-- [Docker Setup](#docker-setup)
-- [Local Setup](#local-setup)
-  - [Start the Database](#start-the-database)
-    - [Database: Normal Start](#database-normal-start)
-    - [Database: Initial Start / Reset](#database-initial-start--reset)
-  - [Generate Data](#generate-data)
-  - [Start the Full Text Search](#start-the-full-text-search)
-    - [Run Frontend with Docker](#run-frontend-with-docker)
-    - [Run Frontend locally](#run-frontend-locally)
-- [Further Documentation](#further-documentation)
-- [Notes](#notes)
-
-## Project Status
-
-**Note:** This repository is currently **not under active development**. We hope to resume development in the future if we can secure funding through the following platforms:
-
-- [GitHub Sponsors](https://github.com/sponsors/open-discourse)
-- [Patreon](https://www.patreon.com/opendiscourse)
-- Grants or institutional funding
-
-We sincerely appreciate any financial support which will help us continue improving this project.
-
-### Contributing
-
-While we are not actively developing at the moment, contributions from the open-source community are incredibly valuable and encouraged. If you have ideas, bug fixes, or improvements, please feel free create an issue or open a pull request!
-
-Thank you for your support and contributions! Together, we can keep this project moving forward.
-
-## Project Info
-
-The platform is our contribution to democratizing access to political debates and issues.
-
-Open Discourse is a non-profit project of the employees of Limebit GmbH. The idea emerged from the skills and motivations of the employees, in break conversations and from the common ideas of democracy.
-
-We hope that through our preliminary work, data-based journalism, science and civil society will benefit and that the facilitated access to data will encourage to analyze the political history of the Bundestag based on the language used by politicians.
-
-We are happy for every financial support via: https://www.patreon.com/opendiscourse/ or https://github.com/sponsors/open-discourse
+## TL;DR
 
 ## Repository Structure
 
-This Repo is structured in three different parts.
+This Repository is structured in two different components.
 
-- [database](./database):
-  - Docker-Container for the Postgres Database
-  - Contains Scripts that update the Database
-- [frontend](./frontend):
-  - Frontend for the Full Text Search
-- [proxy](./proxy):
-  - Docker-Container for the Proxy, which protects the database
-- [python](./python):
-  - Includes every python script in different subsections, sorted by execution order
+- [app](./app):
+  - contains the Streamlit application
+- [ollama](./ollama):
+  - contains configuration for the Ollama API client
 
-## Docker Setup
+## Local Setup (using Docker)
 
-For a quick setup using Docker, please read the [DOCKER_SETUP](./DOCKER_SETUP.md)
+> **IMPORTANT**: Before you begin, follow the steps below and ensure you have completed all pre-requisites.
 
-## Local Setup
+### Pre-Requisites
 
-Required software:
-[python3](https://www.python.org/downloads/),
-[yarn](https://yarnpkg.com/),
-[docker-compose](https://docs.docker.com/compose/),
-[node version 12](https://nodejs.org/dist/latest-v12.x/docs/api/) - ideally installed via node version manager (nvm)
+- Required Software:
+  - [python >=3.11](https://www.python.org/downloads/),
+  - [Docker & docker-compose](https://docs.docker.com/),
 
-- run `yarn` in following directories:
-  - `database`
-  - `frontend`
-- run `sh setup.sh` in the `python` directory
-- run `docker-compose build` in the `root` folder
+### Setup & Build Docker Containers
 
-### Start the Database
+> **IMPORTANT**: Follow the steps listed below the [Remarks before Building](#remarks-before-building) before proceeding with the setup.
 
-These steps will guide you through starting the Database
+- To build and start the Docker containers, run the following command from the `root` directory of the repository:
 
-#### Database: Normal Start
-
-You can easily start the Database via docker-compose.
-
-```Shell
-// run from repository root
-docker-compose up -d database
+```bash
+docker-compose up --build
 ```
 
-#### Database: Initial Start / Reset
+- The Streamlit application should be available at `http://localhost:8501`.
 
-For the initial start of the Database, you will also need to upload the schema.
+>**note**: On the first start, it may take a few minutes for the containers to build and start up. Especially for the LLM (Ollama) container, which require additional time to download and set up the language model.
 
-```Shell
-// run from database folder
-yarn run db:update:local
-```
+#### Remarks before Building
 
-### Generate Data
+> **IMPORTANT**: Before building the containers, please read the following remarks carefully.
 
-Generate the OpenDiscourse-Database from the ground up. The Database has to be started for this script to finish.
+- Ensure that you have the latest version of Docker and docker-compose installed.
+- Consider increasing the resources allocated to Docker (CPU, memory)
+  - The default settings in the [docker-compose.yml](./docker-compose.yml) require at least 8 GB of RAM
+  - If your system has limited resources, you may need to adjust the services to use less memory (especially for the LLM container)
 
-This script is just a pipeline executing all scripts in `src`. You can also manually run every script seperatly. For Documentation on this, please visit the [README in src](./python/src/README.md)
+#### LLM (Ollama) Container Setup
 
-```Shell
-// run from python folder
-sh build.sh
-```
+> **TL;DR**: The LLM (Ollama) container is responsible for serving the language model API.
 
-### Start the Full Text Search
+- This container is built using the `Dockerfile` located in the `ollama` directory.
+- [Ollama](https://ollama.com/) is a powerful framework for deploying and serving large language models.
+- The container exposes the API on port 11434.
+- The model used is the `llama3.1:8b` but can (should) be replaced -> see [notes on ollama usage](#notes-on-ollama-usage)
 
-_Note:_ All of the previous steps have to be completed at least once for the Full Text Search to work properly.
+#### Streamlit Application Setup
 
-If you want to setup the Full Text Search, follow these steps:
+> **TL;DR**: The Streamlit Application is the user interface for interacting with the data.
 
-- run `yarn` in following directories:
-  - `frontend`
-  - `proxy`
-
-Choose one of the following ways to start the Frontend:
-
-#### Run Frontend with Docker
-
-- run `docker-compose up -d` in the `root` folder
-
-#### Run Frontend locally
-
-- run `docker-compose up -d database proxy`in the `root` folder
-- run `yarn dev` in the `frontend` folder
-
-## Further Documentation
-
-- Documentation of the database can be found in the [README in database](./database/README.md)
-- Documentation of the frontend can be found in the [README in frontend](./frontend/README.md)
-- Documentation of the proxy can be found in the [README in proxy](./proxy/README.md)
-- Documentation of the python service can be found in the [README in python](./python/README.md)
-- Documentation of every python-script can be found in the [README in python/src](./python/src/README.md)
+- This container is built using the `Dockerfile` located in the `app` directory.
+- [Streamlit](https://streamlit.io/) is an open-source app framework for developing quick and interactive data applications for machine learning and data science purposes.
+- A detailed description of the application capabilities and features can be found in the [documentation]().
 
 ## Notes
 
-- We use [Python 3.7.4](https://www.python.org/downloads/release/python-374/) [d](https://bit.ly/2KE5DFm)uring development of the project
-- The graphql endpoint was deprecated and removed by version 1.1.0
+### Notes on Ollama Usage
+
+- The Ollama container is designed to serve the language model API efficiently.
+- Ensure the model you intend to use suits your system's resources
+  - Some Models may require more VRAM than others, so it's important to check the model documentation for details
+  - Suitable and lightweight models are:
+    - `llama3.1:8b` or llama 3 with less parameters
+    - `gemma3:4b` or gemma 3 with less parameters
+    - `qwen2.5:7b` or qwen 2.5 with less parameters
+  - Large and resource-intensive models are:
+    - `gpt-oss`
+    - `phi4`
+    - all models with more than 8b parameters
+
+## Troubleshooting
+
+- If you encounter issues with the Ollama container, consider the following steps:
+  - Check the container logs for any error messages or warnings.
+  - Ensure that your system meets the resource requirements for the selected model.
+  - If the model fails to load, try using a lighter model or adjusting the container's resource limits.
+  - Consult the [Ollama documentation](https://ollama.com/docs) for additional troubleshooting tips.
