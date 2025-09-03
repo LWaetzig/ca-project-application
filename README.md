@@ -1,77 +1,86 @@
 # Table of Content
 
-- [Repository Structure](#repository-structure)
-- [Local Setup (using Docker)](#local-setup-using-docker)
-  - [Pre-Requisites](#pre-requisites)
-  - [Pre-Setup](#pre-setup)
-  - [Setup Docker Containers](#setup-docker-containers)
-  - [Database Container Setup](#database-container-setup)
-  - [Streamlit Application Setup](#streamlit-application-setup)
+## TL;DR
 
 ## Repository Structure
 
-This Repo is structured in three different parts.
+This Repository is structured in two different components.
 
-- [database](./database):
-  - docker-container for the postgres database
-  - contains scripts that update the database
-- [python](./python):
-  - includes every python script in different subsections to download & generate data, sorted by execution order
 - [app](./app):
   - contains the Streamlit application
+- [ollama](./ollama):
+  - contains configuration for the Ollama API client
 
 ## Local Setup (using Docker)
+
+> **IMPORTANT**: Before you begin, follow the steps below and ensure you have completed all pre-requisites.
 
 ### Pre-Requisites
 
 - Required Software:
   - [python >=3.11](https://www.python.org/downloads/),
-  - [yarn](https://yarnpkg.com/),
-  - [Docker / docker-compose](https://docs.docker.com/),
-  - [node](https://nodejs.org/en/download) - ideally installed via node version manager (nvm)
+  - [Docker & docker-compose](https://docs.docker.com/),
 
-### Pre-Setup
+### Setup & Build Docker Containers
 
-- run the following commands in the dedicated terminal
-  - `yarn` in the `database` directory
-  - `sh setup.sh` in the `python` directory
+> **IMPORTANT**: Follow the steps listed below the [Remarks before Building](#remarks-before-building) before proceeding with the setup.
 
-### Setup Docker Containers
+- To build and start the Docker containers, run the following command from the `root` directory of the repository:
 
-- for the initial build: run `docker-compose build` in the `root` folder
-
-#### Database Container Setup
-
-The following steps will guide you through setting up and starting the database
-
-0. Change into the database directory and make sure the database container is running (if not: `docker-compose up -d database`)
-1. Upload the schema to the database by executing the following command:
-
-```shell
-// run from database folder
-yarn run db:update:local
+```bash
+docker-compose up --build
 ```
 
-2. Change into the python directory
-3. Download / Generate Data by executing the following command:
+- The Streamlit application should be available at `http://localhost:8501`.
 
-```shell
-// run from python folder
-sh build.sh
-```
+>**note**: On the first start, it may take a few minutes for the containers to build and start up. Especially for the LLM (Ollama) container, which require additional time to download and set up the language model.
 
-> **note:** This script is a pipeline executing all scripts in `python/src`. A detailed description of each script can be found in the [README in src](./python/src/README.md).
+#### Remarks before Building
+
+> **IMPORTANT**: Before building the containers, please read the following remarks carefully.
+
+- Ensure that you have the latest version of Docker and docker-compose installed.
+- Consider increasing the resources allocated to Docker (CPU, memory)
+  - The default settings in the [docker-compose.yml](./docker-compose.yml) require at least 8 GB of RAM
+  - If your system has limited resources, you may need to adjust the services to use less memory (especially for the LLM container)
+
+#### LLM (Ollama) Container Setup
+
+> **TL;DR**: The LLM (Ollama) container is responsible for serving the language model API.
+
+- This container is built using the `Dockerfile` located in the `ollama` directory.
+- [Ollama](https://ollama.com/) is a powerful framework for deploying and serving large language models.
+- The container exposes the API on port 11434.
+- The model used is the `llama3.1:8b` but can (should) be replaced -> see [notes on ollama usage](#notes-on-ollama-usage)
 
 #### Streamlit Application Setup
 
-> **note:** In order to be able to use the Streamlit application, you need to complete the setup steps for the database and the Python scripts first.
+> **TL;DR**: The Streamlit Application is the user interface for interacting with the data.
 
-- no setup required
-- run the following command to start the complete application:
+- This container is built using the `Dockerfile` located in the `app` directory.
+- [Streamlit](https://streamlit.io/) is an open-source app framework for developing quick and interactive data applications for machine learning and data science purposes.
+- A detailed description of the application capabilities and features can be found in the [documentation]().
 
-```shell
-// run from root folder
-docker-compose up
-```
+## Notes
 
-- the streamlit application should be available at `http://localhost:8501`
+### Notes on Ollama Usage
+
+- The Ollama container is designed to serve the language model API efficiently.
+- Ensure the model you intend to use suits your system's resources
+  - Some Models may require more VRAM than others, so it's important to check the model documentation for details
+  - Suitable and lightweight models are:
+    - `llama3.1:8b` or llama 3 with less parameters
+    - `gemma3:4b` or gemma 3 with less parameters
+    - `qwen2.5:7b` or qwen 2.5 with less parameters
+  - Large and resource-intensive models are:
+    - `gpt-oss`
+    - `phi4`
+    - all models with more than 8b parameters
+
+## Troubleshooting
+
+- If you encounter issues with the Ollama container, consider the following steps:
+  - Check the container logs for any error messages or warnings.
+  - Ensure that your system meets the resource requirements for the selected model.
+  - If the model fails to load, try using a lighter model or adjusting the container's resource limits.
+  - Consult the [Ollama documentation](https://ollama.com/docs) for additional troubleshooting tips.

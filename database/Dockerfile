@@ -1,5 +1,0 @@
-FROM postgres:16-bullseye
-
-RUN apt update && apt install --no-install-recommends -y git build-essential ca-certificates postgresql-server-dev-16
-RUN git clone https://github.com/postgrespro/rum
-RUN cd rum && make USE_PGXS=1 && make USE_PGXS=1 install
